@@ -28,7 +28,7 @@ LIMIT 200;`;function selected(){return $('region').value==='BOTH'?['JP','TW']:[$
   const idIdx=columns.findIndex(c=>/^(song_id|歌曲編號)$/i.test(c));
   const byKey=new Map(),byTitle=new Map(),byId=new Map();
   for(const [region,data] of Object.entries(loaded))for(const song of data.songs){
-    const item={id:song.id,region,bundle:song.assetbundleName||('jacket_s_'+String(song.id).padStart(3,'0'))};
+    const item={id:song.id,region,bundle:'jacket_s_'+String(song.id).padStart(3,'0')};
     byKey.set(region+'\u0000'+song.title,item);
     byId.set(region+'\u0000'+song.id,item);
     if(!byTitle.has(song.title))byTitle.set(song.title,[]);
@@ -46,8 +46,9 @@ LIMIT 200;`;function selected(){return $('region').value==='BOTH'?['JP','TW']:[$
     const regions=song.region==='TW'?['tw','jp']:['jp','tw'];
     const urls=[];
     for(const rg of regions)for(const ext of ['png','webp'])urls.push('https://storage.sekai.best/sekai-'+rg+'-assets/music/jacket/'+bundle+'/'+bundle+'.'+ext);
+    // 備援：可直接在瀏覽器開啟網址，確認圖片伺服器是否可用。
     const url=urls[0];
-    return '<td class="covercell"><a href="'+url+'" target="_blank" rel="noopener noreferrer" title="查看歌曲封面原圖"><img class="jacket" loading="lazy" alt="'+escapeHTML(title)+' 歌曲封面插畫" src="'+url+'" data-jacket="1" data-sources="'+escapeHTML(JSON.stringify(urls))+'" data-try="0"></a><span class="cover-missing" hidden>圖片來源無法載入</span></td>';
+    return '<td class="covercell"><a href="'+url+'" target="_blank" rel="noopener noreferrer" title="查看歌曲封面原圖"><img class="jacket" loading="lazy" alt="'+escapeHTML(title)+' 歌曲封面插畫" src="'+url+'" data-jacket="1" data-sources="'+escapeHTML(JSON.stringify(urls))+'" data-try="0"></a><span class="cover-missing" hidden>圖片來源無法載入（可點開圖片測試網址）</span></td>';
   });
   return '<table><thead><tr><th>歌曲封面</th>'+columns.map(c=>'<th>'+escapeHTML(c)+'</th>').join('')+'</tr></thead><tbody>'+rows.map((r,i)=>'<tr>'+cells[i]+r.map(x=>'<td>'+escapeHTML(x===null?'NULL':x)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(rows.length?'':'<p>沒有符合條件的資料。</p>');
 };
