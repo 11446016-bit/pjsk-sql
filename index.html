@@ -4,7 +4,7 @@
 <section><h2>01｜案例背景</h2><p><b>使用者：</b>《世界計畫》日服與台服玩家、想選擇練習譜面的玩家、SQL 學習者。</p><p><b>問題：</b>兩服歌曲推出進度不同，玩家需要依照伺服器、歌曲名稱、難易度與等級尋找合適譜面，也希望用 SQL 了解篩選、JOIN、GROUP BY 和排序。</p><p class="muted small">資料來源：Sekai-World 社群整理之日服／繁中服主資料庫，非官方即時遊戲 API。資料可能包含未公開或尚未實裝項目；本頁以歌曲 publishedAt 時間過濾未來歌曲（如有該欄位），仍請以遊戲實際內容為準。</p></section>
 <section><h2>02｜資料載入與版本</h2><div class="row"><label>顯示版本<select id="region"><option value="BOTH">日服＋台服（雙版本）</option><option value="JP">僅日服</option><option value="TW">僅台服</option></select></label></div><p><button id="load">↻ 重新載入日服／台服</button> <button id="export" class="alt" disabled>匯出目前資料 JSON</button></p><label>本機匯入（選擇先前匯出的 JSON；可離線使用）<input id="import" type="file" accept=".json,application/json"></label><p class="small">封面連線測試：<a href="https://storage.sekai.best/sekai-jp-assets/music/jacket/jacket_s_001/jacket_s_001.png" target="_blank" rel="noopener">開啟已驗證的 Tell Your World 封面</a></p><div id="loadStatus" class="status" role="status">準備讀取資料…</div><div id="counts" class="grid"></div></section>
 <section><h2>03｜資料庫設計（ERD）</h2><div class="erd"><div class="entity"><b>servers</b><span>🔑 server_code PK</span><span>server_name</span></div><div class="arrow">1 ── &lt; N</div><div class="entity"><b>songs</b><span>🔑 (server_code, song_id)</span><span>title / composer</span><span>published_at</span></div><div class="arrow">1 ── &lt; N</div><div class="entity"><b>charts</b><span>🔑 (server_code, song_id, difficulty)</span><span>difficulty</span><span>level / note_count</span></div></div><p>每個伺服器有多首歌曲；同一首歌曲在不同伺服器可能有不同收錄狀態或等級。每首歌曲對應多種譜面。以 <code>(server_code, song_id)</code> 作複合鍵，避免日服與台服同編號互相混淆。</p><div class="scroll"><table><thead><tr><th>欄位</th><th>型態</th><th>說明</th></tr></thead><tbody><tr><td>servers.server_code</td><td>TEXT PK</td><td>JP / TW</td></tr><tr><td>songs.song_id</td><td>INTEGER</td><td>遊戲歌曲編號</td></tr><tr><td>songs.title</td><td>TEXT</td><td>歌曲名稱</td></tr><tr><td>songs.composer</td><td>TEXT</td><td>作曲者（來源有值時）</td></tr><tr><td>songs.published_at</td><td>INTEGER</td><td>發布時間（Unix 毫秒）</td></tr><tr><td>charts.difficulty</td><td>TEXT</td><td>EASY / NORMAL / HARD / EXPERT / MASTER / APPEND</td></tr><tr><td>charts.level</td><td>INTEGER</td><td>譜面等級</td></tr><tr><td>charts.note_count</td><td>INTEGER</td><td>譜面總音符數（來源有值時）</td></tr></tbody></table></div><h3>真實樣本資料（載入後顯示）</h3><div id="sample" class="scroll"></div></section>
-<section><h2>外部譜面連結</h2><p class="muted">查詢結果會顯示「查看譜面」連結，依歌曲編號與 EASY／NORMAL／HARD／EXPERT／MASTER／APPEND 難易度開啟外部 PNG 譜面。部分歌曲或難度可能尚未有公開譜面；台服優先沿用同歌曲編號的日服譜面，兩服譜面若不同，請以遊戲內資料為準。</p><p><a class="jacket-link" href="https://storage.sekai.best/sekai-music-charts/jp/0142/master.png" target="_blank" rel="noopener noreferrer">測試：Reborn MASTER 譜面 ↗</a></p></section>
+<section><h2>外部譜面連結</h2><p class="muted">查詢結果會顯示「查看譜面」連結，依歌曲編號與 EASY／NORMAL／HARD／EXPERT／MASTER／APPEND 難易度開啟外部 PNG 譜面。部分歌曲或難度可能尚未有公開譜面；台服若能依歌曲名稱對應日服歌曲，沿用日服歌曲編號及譜面；繁中服獨佔歌曲則提供繁中服候選素材連結，未驗證來源可能無法開啟。</p><p><a class="jacket-link" href="https://storage.sekai.best/sekai-music-charts/jp/0142/master.png" target="_blank" rel="noopener noreferrer">測試：Reborn MASTER 譜面 ↗</a></p></section>
 <section><h2>歌曲封面連結測試</h2><p class="muted">本網站不再直接載入封面圖片。點擊連結即可在新分頁查看原始封面。</p><p><a target="_blank" rel="noopener noreferrer" href="https://storage.sekai.best/sekai-jp-assets/music/jacket/jacket_s_001/jacket_s_001.png">開啟 Tell Your World 封面</a></p></section>
 <section><h2>04｜查詢操作：歌曲難易度與歌曲等級</h2><div class="row"><label>查詢伺服器<select id="queryRegion"><option value="BOTH">日服＋台服（雙版本）</option><option value="JP">日服（JP）</option><option value="TW">台服（TW）</option></select></label><label>歌名關鍵字<input id="keyword" placeholder="例如 初音、Tell Your World"></label><label>歌曲難易度<select id="difficulty"><option value="">全部</option><option>EASY</option><option>NORMAL</option><option>HARD</option><option>EXPERT</option><option>MASTER</option><option>APPEND</option></select></label><label>最低等級<input id="min" type="number" min="1" max="50" placeholder="不限"></label><label>最高等級<input id="max" type="number" min="1" max="50" placeholder="不限"></label></div><p><button id="build">依篩選條件產生 SQL</button> <button id="reset" class="alt">還原 SQL</button></p><label>SQL 編輯器（可自行修改 SELECT / JOIN / WHERE / GROUP BY）<textarea id="sql" spellcheck="false"></textarea></label><p><button id="run">▶ 執行 SQL</button> <button id="baseline" class="alt">儲存本次結果作比較基準</button></p><div id="sqlStatus" class="status">請先載入資料。</div><div id="result" class="scroll"></div></section>
 <section><h2>05｜查詢問題、SQL 與預期結果</h2><p>按範例即可載入並執行 SQL。由於日服與台服會更新，預期結果以<b>查詢規則</b>為準，實際筆數由當下主資料庫決定，不虛構固定數量。</p><div id="examples" class="grid"></div></section>
@@ -23,17 +23,17 @@ LIMIT 200;`;function selected(){return $('region').value==='BOTH'?['JP','TW']:[$
   if(typeof bundle==='string' && /^jacket_s_[A-Za-z0-9_]+$/.test(bundle))names.push(bundle);
   const canonical='jacket_s_'+String(id).padStart(3,'0');
   if(!names.includes(canonical))names.push(canonical);
-  const regions=['jp']; // 封面統一使用日服素材，不再嘗試台服圖片主機
+  const regions=region==='TW'?['tc','tw']:['jp']; // 繁中服獨佔歌曲：提供繁中服候選素材連結
   const urls=[];
   for(const name of names)for(const rg of regions)for(const ext of ['png','webp'])
     urls.push('https://storage.sekai.best/sekai-'+rg+'-assets/music/jacket/'+name+'/'+name+'.'+ext);
   return [...new Set(urls)];
 }
-function chartURL(songId,difficulty){
+function chartURL(songId,difficulty,region='JP'){
   const id=Number(songId), diff=String(difficulty||'').toLowerCase();
   if(!Number.isInteger(id)||id<=0||!levels.includes(diff.toUpperCase()))return null;
   // Sekai Viewer 譜面圖片以四位數歌曲 ID 與小寫難度命名。
-  return 'https://storage.sekai.best/sekai-music-charts/jp/'+String(id).padStart(4,'0')+'/'+diff+'.png';
+  return 'https://storage.sekai.best/sekai-music-charts/'+(region==='TW'?'tc':'jp')+'/'+String(id).padStart(4,'0')+'/'+diff+'.png';
 }
 function showResults(columns,rows){
   const titleIdx=columns.findIndex(c=>/^(歌曲名稱|title|歌曲名|歌名)$/i.test(c));
@@ -65,11 +65,13 @@ function showResults(columns,rows){
     // 台服的歌曲 ID 可能與日服不同，優先用歌名對應日服歌曲編號。
     const jpMatch=song.region==='TW'?(jpByTitle.get(song.title)||null):song;
     const coverSong=jpMatch||song;
-    const cover=jacketURLs('JP',coverSong.id,coverSong.assetbundleName)[0];
+    const exclusive=song.region==='TW'&&!jpMatch;
+    const coverSources=jacketURLs(exclusive?'TW':'JP',coverSong.id,coverSong.assetbundleName);
     const difficulty=difficultyIdx>=0?String(r[difficultyIdx]??''):'';
-    const chart=chartURL(song.id,difficulty);
-    const coverCell='<td class="covercell"><a class="jacket-link" href="'+escapeHTML(cover)+'" target="_blank" rel="noopener noreferrer">點擊查看封面 ↗</a></td>';
-    const chartCell=chart?'<td class="covercell"><a class="jacket-link" href="'+escapeHTML(chart)+'" target="_blank" rel="noopener noreferrer" title="在新分頁開啟 '+escapeHTML(difficulty)+' 譜面">查看 '+escapeHTML(difficulty.toUpperCase())+' 譜面 ↗</a></td>':'<td class="covercell"><span class="cover-missing">需查出難易度</span></td>';
+    const chart=chartURL(coverSong.id,difficulty,exclusive?'TW':'JP');
+    const link=(url,label)=>'<a class="jacket-link" href="'+escapeHTML(url)+'" target="_blank" rel="noopener noreferrer">'+escapeHTML(label)+'</a>';
+    const coverCell='<td class="covercell">'+link(coverSources[0],exclusive?'嘗試繁中服封面 ↗':'點擊查看封面 ↗')+(exclusive&&coverSources[2]?'<div class="small">'+link(coverSources[2],'備用封面來源 ↗')+'</div>':'')+(exclusive?'<div class="cover-missing">繁中服獨佔：來源未驗證</div>':'')+'</td>';
+    const chartCell=chart?'<td class="covercell">'+link(chart,exclusive?'嘗試繁中服 '+difficulty.toUpperCase()+' 譜面 ↗':'查看 '+difficulty.toUpperCase()+' 譜面 ↗')+(exclusive?'<div class="cover-missing">來源未驗證</div>':'')+'</td>':'<td class="covercell"><span class="cover-missing">需查出難易度</span></td>';
     return coverCell+chartCell;
   });
   return '<table><thead><tr><th>歌曲封面連結</th><th>外部譜面連結</th>'+columns.map(c=>'<th>'+escapeHTML(c)+'</th>').join('')+'</tr></thead><tbody>'+rows.map((r,i)=>'<tr>'+cells[i]+r.map(x=>'<td>'+escapeHTML(x===null?'NULL':x)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(rows.length?'':'<p>沒有符合條件的資料。</p>');
