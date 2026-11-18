@@ -23,7 +23,7 @@ LIMIT 200;`;function selected(){return $('region').value==='BOTH'?['JP','TW']:[$
   if(typeof bundle==='string' && /^jacket_s_[A-Za-z0-9_]+$/.test(bundle))names.push(bundle);
   const canonical='jacket_s_'+String(id).padStart(3,'0');
   if(!names.includes(canonical))names.push(canonical);
-  const regions=region==='TW'?['tw','jp']:['jp','tw'];
+  const regions=['jp']; // 封面統一使用日服素材，不再嘗試台服圖片主機
   const urls=[];
   for(const name of names)for(const rg of regions)for(const ext of ['png','webp'])
     urls.push('https://storage.sekai.best/sekai-'+rg+'-assets/music/jacket/'+name+'/'+name+'.'+ext);
@@ -46,6 +46,10 @@ function showResults(columns,rows){
     const entry={...song,region};byId.set(region+'|'+song.id,entry);
     const key=region+'|'+song.title;if(!byTitle.has(key))byTitle.set(key,entry);
   }
+  const jpByTitle=new Map();
+  for(const jpSong of (loaded.JP?.songs||[])){
+    if(!jpByTitle.has(jpSong.title))jpByTitle.set(jpSong.title,jpSong);
+  }
   const cells=rows.map(r=>{
     const title=titleIdx>=0?String(r[titleIdx]??''):'';
     const id=idIdx>=0?Number(r[idIdx]):NaN;
@@ -58,7 +62,10 @@ function showResults(columns,rows){
       if(song)break;
     }
     if(!song)return '<td class="covercell"><span class="cover-missing">無法對應歌曲</span></td><td class="covercell"><span class="cover-missing">無法對應歌曲</span></td>';
-    const cover=jacketURLs(song.region,song.id,song.assetbundleName)[0];
+    // 台服的歌曲 ID 可能與日服不同，優先用歌名對應日服歌曲編號。
+    const jpMatch=song.region==='TW'?(jpByTitle.get(song.title)||null):song;
+    const coverSong=jpMatch||song;
+    const cover=jacketURLs('JP',coverSong.id,coverSong.assetbundleName)[0];
     const difficulty=difficultyIdx>=0?String(r[difficultyIdx]??''):'';
     const chart=chartURL(song.id,difficulty);
     const coverCell='<td class="covercell"><a class="jacket-link" href="'+escapeHTML(cover)+'" target="_blank" rel="noopener noreferrer">點擊查看封面 ↗</a></td>';
